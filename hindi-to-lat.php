@@ -461,7 +461,8 @@ function ctl_sanitize_title($title) {
 'य़' => 'y',
 'ज़' => 'z',
 'फ़' => 'f',
-'ग़' => 'gh'
+'ग़' => 'gh',
+'कॉ'-> 'Ko'		
 	
 	);	
 
