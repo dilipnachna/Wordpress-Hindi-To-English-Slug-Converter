@@ -1,6 +1,6 @@
 ﻿=== Hindi-To-Lat ===
-Contributors: BArS, SergeyBiryukov, karevn, webvitaly,Alexander Butyuhin
-Tags: hi2lat, hindi to latin, cyr2lat, slugs, translations, transliteration, cyrillic
+Contributors: Dilip Soni, BArS, SergeyBiryukov, karevn, webvitaly,Alexander Butyuhin
+Tags: hindi to lat,hi2lat, hindi to latin, cyr2lat, slugs, translations, transliteration, cyrillic, Hindi Slug,Hindi Permalink, Hinglish Slug, Hindi to Hinglish,
 Requires at least: 4.6
 Tested up to: 5.4.2
 Stable tag: 1.3.5
@@ -30,7 +30,7 @@ Based on the original Rus-To-Lat plugin by Anton Skorobogatov and Cyr-To-Lat by 
 
 = Translations =
 
-You can [translate hindi-To-Lat](https://translate.wordpress.org/projects/wp-plugins/hi-to-lat) on [__translate.wordpress.org__]().
+You can [translate hindi-To-Lat](https://translate.wordpress.org/projects/wp-plugins/hindi-to-lat) on [__translate.wordpress.org__]().
 
 == Frequently Asked Questions ==
 
