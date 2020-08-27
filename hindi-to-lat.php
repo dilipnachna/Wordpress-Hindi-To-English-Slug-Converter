@@ -462,7 +462,7 @@ function ctl_sanitize_title($title) {
 'ज़' => 'z',
 'फ़' => 'f',
 'ग़' => 'gh',
-'कॉ'-> 'Ko'		
+'कॉ'=> 'Ko'		
 	
 	);	
 
