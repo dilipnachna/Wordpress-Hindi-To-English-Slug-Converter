@@ -16,7 +16,7 @@ License URI: https://www.gnu.org/licenses/gpl-2.0.html
 */
  
 /** Array of letters to convert */
-function ctl_sanitize_title($title) {
+function ctl_hinglish_title($title) {
 	global $wpdb;
 
 	$hindi_table = array(
@@ -495,17 +495,17 @@ function ctl_sanitize_title($title) {
 
 	return $title;
 }
-add_filter('sanitize_title', 'ctl_sanitize_title', 9);
-add_filter('sanitize_file_name', 'ctl_sanitize_title');
+add_filter('sanitize_title', 'ctl_hinglish_title', 9);
+add_filter('sanitize_file_name', 'ctl_hinglish_title');
 
 /** Convert existing slugs */
 
-function ctl_convert_existing_slugs() {
+function ctl_hinglish_existing_slugs() {
 	global $wpdb;
 
 	$posts = $wpdb->get_results("SELECT ID, post_name FROM {$wpdb->posts} WHERE post_name REGEXP('[^A-Za-z0-9\-]+') AND post_status IN ('publish', 'future', 'private')");
 	foreach ( (array) $posts as $post ) {
-		$sanitized_name = ctl_sanitize_title(urldecode($post->post_name));
+		$sanitized_name = ctl_hinglish_title(urldecode($post->post_name));
 		if ( $post->post_name != $sanitized_name ) {
 			add_post_meta($post->ID, '_wp_old_slug', $post->post_name);
 			$wpdb->update($wpdb->posts, array( 'post_name' => $sanitized_name ), array( 'ID' => $post->ID ));
@@ -514,14 +514,14 @@ function ctl_convert_existing_slugs() {
 
 	$terms = $wpdb->get_results("SELECT term_id, slug FROM {$wpdb->terms} WHERE slug REGEXP('[^A-Za-z0-9\-]+') ");
 	foreach ( (array) $terms as $term ) {
-		$sanitized_slug = ctl_sanitize_title(urldecode($term->slug));
+		$sanitized_slug = ctl_hinglish_title(urldecode($term->slug));
 		if ( $term->slug != $sanitized_slug ) {
 			$wpdb->update($wpdb->terms, array( 'slug' => $sanitized_slug ), array( 'term_id' => $term->term_id ));
 		}
 	}
 }
 
-function ctl_schedule_conversion() {
-	add_action('shutdown', 'ctl_convert_existing_slugs');
+function ctl_future_conversion() {
+	add_action('shutdown', 'ctl_hinglish_existing_slugs');
 }
-register_activation_hook(__FILE__, 'ctl_schedule_conversion');
+register_activation_hook(__FILE__, 'ctl_future_conversion');
