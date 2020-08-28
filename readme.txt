@@ -2,8 +2,8 @@
 Contributors: Dilip Soni, BArS, SergeyBiryukov, karevn, webvitaly,Alexander Butyuhin
 Tags: hindi to lat,hi2lat, hindi to latin, cyr2lat, slugs, translations, transliteration, cyrillic, Hindi Slug,Hindi Permalink, Hinglish Slug, Hindi to Hinglish,
 Requires at least: 4.6
-Tested up to: 5.4.2
-Stable tag: 1.3.5
+Tested up to: 5.5
+Stable tag: 1.0
 Requires PHP: 7.2
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
