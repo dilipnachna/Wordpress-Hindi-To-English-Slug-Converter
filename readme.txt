@@ -18,12 +18,14 @@ Converts Hindi characters in post, page and term slugs to Latin characters. Usef
 * Automatically converts existing post, page and term slugs on activation
 * Saves existing post and page permalinks integrity
 * Performs transliteration of attachment file names
-* Includes just Ukrainian characters
+* Includes just Hindi characters
 * Transliteration table can be customized without editing the plugin itself
 
 Based on the original Rus-To-Lat plugin by Anton Skorobogatov and Cyr-To-Lat by SergeyBiryukov, karevn, webvitaly.
 
 == Installation ==
+
+Caution: all permalink will be changed so use a auto redirction plugin before activate this plugin.(i am using rankmath)
 
 1. Upload `hindi-to-lat` folder to the `/wp-content/plugins/` directory.
 2. Activate the plugin through the 'Plugins' menu in WordPress.
