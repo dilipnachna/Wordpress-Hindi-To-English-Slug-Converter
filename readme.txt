@@ -34,18 +34,6 @@ You can [translate hindi-To-Lat](https://translate.wordpress.org/projects/wp-plu
 
 == Frequently Asked Questions ==
 
-= How can I define my own substitutions? =
-
-Add this code to your theme's `functions.php` file:
-`
-function my_cyr_to_lat_table($ctl_table) {
-   $ctl_table['ะช'] = 'U';
-   $ctl_table['ั'] = 'u';
-   return $ctl_table;
-}
-add_filter('ctl_table', 'my_cyr_to_lat_table');
-`
-
 = How to redirect old link to new? =
 
 To prevent losing you SEO position you can use plugin LCH (https://wordpress.org/plugins/link-changer-htaccess-for-better-seo/) to prepare redirect from old links to new one.
