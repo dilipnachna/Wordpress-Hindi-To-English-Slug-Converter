@@ -61,7 +61,6 @@ function ctl_hindi_to_lat_title($title) {
 'कौ' => 'kau',
 'कं' => 'kan',
 'कः' => 'kah',
-'कॉ'=> 'co',
 'ख' => 'kh',
 'ख्' => 'kh',
 'खा' => 'kha',
