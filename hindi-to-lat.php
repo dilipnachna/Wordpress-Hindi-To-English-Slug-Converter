@@ -1,12 +1,12 @@
 <?php
 /**
- * @package Hindi-To-Lat
+ * @package hindi-to-lat
  * @version 1.0
  */
 /*
-Plugin Name: Hindi-To-Lat
+Plugin Name: hindi-to-lat
 Text Domain: hindi-to-lat
-Plugin URI: https://wordpress.org/plugins/hindi-to-lat/
+Plugin URI: https://wordpress.org/plugins/hindi-to-lat
 Description: Converts Hindi characters in post and term slugs to Latin characters. Useful for creating human-readable URLs. Based on the original plugin by Anton Skorobogatov and Cyr-To-Lat by SergeyBiryukov and Ukr-To-Lat Alexander Butyuhin.
 Author: Dilip Soni
 Author URI: https://dilipsoni.in
@@ -16,7 +16,7 @@ License URI: https://www.gnu.org/licenses/gpl-2.0.html
 */
  
 /** Array of letters to convert */
-function ctl_hinglish_title($title) {
+function ctl_hindi_to_lat_title($title) {
 	global $wpdb;
 
 	$hindi_table = array(
@@ -61,6 +61,7 @@ function ctl_hinglish_title($title) {
 'कौ' => 'kau',
 'कं' => 'kan',
 'कः' => 'kah',
+'कॉ'=> 'co',
 'ख' => 'kh',
 'ख्' => 'kh',
 'खा' => 'kha',
@@ -495,17 +496,17 @@ function ctl_hinglish_title($title) {
 
 	return $title;
 }
-add_filter('sanitize_title', 'ctl_hinglish_title', 9);
-add_filter('sanitize_file_name', 'ctl_hinglish_title');
+add_filter('sanitize_title', 'ctl_hindi_to_lat_title', 9);
+add_filter('sanitize_file_name', 'ctl_hindi_to_lat_title');
 
 /** Convert existing slugs */
 
-function ctl_hinglish_existing_slugs() {
+function ctl_hindi_to_lat_existing_slugs() {
 	global $wpdb;
 
 	$posts = $wpdb->get_results("SELECT ID, post_name FROM {$wpdb->posts} WHERE post_name REGEXP('[^A-Za-z0-9\-]+') AND post_status IN ('publish', 'future', 'private')");
 	foreach ( (array) $posts as $post ) {
-		$sanitized_name = ctl_hinglish_title(urldecode($post->post_name));
+		$sanitized_name = ctl_hindi_to_lat_title(urldecode($post->post_name));
 		if ( $post->post_name != $sanitized_name ) {
 			add_post_meta($post->ID, '_wp_old_slug', $post->post_name);
 			$wpdb->update($wpdb->posts, array( 'post_name' => $sanitized_name ), array( 'ID' => $post->ID ));
@@ -514,7 +515,7 @@ function ctl_hinglish_existing_slugs() {
 
 	$terms = $wpdb->get_results("SELECT term_id, slug FROM {$wpdb->terms} WHERE slug REGEXP('[^A-Za-z0-9\-]+') ");
 	foreach ( (array) $terms as $term ) {
-		$sanitized_slug = ctl_hinglish_title(urldecode($term->slug));
+		$sanitized_slug = ctl_hindi_to_lat_title(urldecode($term->slug));
 		if ( $term->slug != $sanitized_slug ) {
 			$wpdb->update($wpdb->terms, array( 'slug' => $sanitized_slug ), array( 'term_id' => $term->term_id ));
 		}
@@ -522,6 +523,6 @@ function ctl_hinglish_existing_slugs() {
 }
 
 function ctl_future_conversion() {
-	add_action('shutdown', 'ctl_hinglish_existing_slugs');
+	add_action('shutdown', 'ctl_hindi_to_lat_existing_slugs');
 }
 register_activation_hook(__FILE__, 'ctl_future_conversion');
