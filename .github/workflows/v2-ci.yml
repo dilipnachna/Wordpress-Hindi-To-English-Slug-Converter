@@ -81,11 +81,31 @@ jobs:
         run: |
           set -euo pipefail
           OLD_ID=$(wp post create --path=/tmp/htl-wp --post_type=post --post_status=publish --post_title='पुरानी खबर' --post_name='पुरानी-खबर' --porcelain)
+          echo "$OLD_ID" > /tmp/htl-old-id
           BEFORE=$(wp post get "$OLD_ID" --path=/tmp/htl-wp --field=post_name)
           wp plugin activate hindi-to-lat --path=/tmp/htl-wp
           AFTER=$(wp post get "$OLD_ID" --path=/tmp/htl-wp --field=post_name)
           test "$BEFORE" = "$AFTER"
           test "$(wp option get hindi_to_lat_db_version --path=/tmp/htl-wp)" = "2.0.0"
+
+      - name: Prove reviewed migration changes only the selected URL and records redirect memory
+        shell: bash
+        run: |
+          set -euo pipefail
+          OLD_ID=$(cat /tmp/htl-old-id)
+          wp eval --path=/tmp/htl-wp '$id=(int)getenv("HTL_OLD_ID"); $m=new Hindi_To_Lat_Migration(new Hindi_To_Lat_Transliterator(), new Hindi_To_Lat_Redirect_Store()); $r=$m->convert(array("post:".$id)); if (1 !== (int)$r["converted"] || !empty($r["errors"])) { fwrite(STDERR, wp_json_encode($r)); exit(1); }' --env-cwd=/tmp/htl-wp
+        env:
+          HTL_OLD_ID: ${{ env.HTL_OLD_ID }}
+
+      - name: Verify migrated slug and redirect row
+        shell: bash
+        run: |
+          set -euo pipefail
+          OLD_ID=$(cat /tmp/htl-old-id)
+          MIGRATED_SLUG=$(wp post get "$OLD_ID" --path=/tmp/htl-wp --field=post_name)
+          test "$MIGRATED_SLUG" = "purani-khabar"
+          REDIRECT_COUNT=$(wp eval --path=/tmp/htl-wp 'global $wpdb; echo (int)$wpdb->get_var("SELECT COUNT(*) FROM {$wpdb->prefix}hindi_to_lat_redirects");')
+          test "$REDIRECT_COUNT" -ge 1
 
       - name: Prove new post and term slugs transliterate
         shell: bash
