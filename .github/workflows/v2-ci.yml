@@ -93,9 +93,8 @@ jobs:
         run: |
           set -euo pipefail
           OLD_ID=$(cat /tmp/htl-old-id)
-          wp eval --path=/tmp/htl-wp '$id=(int)getenv("HTL_OLD_ID"); $m=new Hindi_To_Lat_Migration(new Hindi_To_Lat_Transliterator(), new Hindi_To_Lat_Redirect_Store()); $r=$m->convert(array("post:".$id)); if (1 !== (int)$r["converted"] || !empty($r["errors"])) { fwrite(STDERR, wp_json_encode($r)); exit(1); }' --env-cwd=/tmp/htl-wp
-        env:
-          HTL_OLD_ID: ${{ env.HTL_OLD_ID }}
+          export HTL_OLD_ID="$OLD_ID"
+          wp eval --path=/tmp/htl-wp '$id=(int)getenv("HTL_OLD_ID"); $m=new Hindi_To_Lat_Migration(new Hindi_To_Lat_Transliterator(), new Hindi_To_Lat_Redirect_Store()); $r=$m->convert(array("post:".$id)); if (1 !== (int)$r["converted"] || !empty($r["errors"])) { fwrite(STDERR, wp_json_encode($r)); exit(1); }'
 
       - name: Verify migrated slug and redirect row
         shell: bash
