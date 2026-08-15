@@ -84,103 +84,156 @@ final class Hindi_To_Lat_Migration {
 		return $result;
 	}
 
-	/** @return array */
+	/**
+	 * Scan posts by primary-key cursor rather than only inspecting the first
+	 * rows in the table. This remains bounded but works on large publications.
+	 *
+	 * @param int $limit Candidate limit.
+	 * @return array
+	 */
 	private function post_candidates( $limit ) {
 		global $wpdb;
 
-		$rows = $wpdb->get_results(
-			$wpdb->prepare(
-				"SELECT ID, post_name, post_type, post_status FROM {$wpdb->posts} WHERE post_name <> '' AND post_type <> 'revision' AND post_status NOT IN ('auto-draft','trash') ORDER BY ID ASC LIMIT %d",
-				max( 100, $limit * 10 )
-			)
-		);
+		$out       = array();
+		$cursor    = 0;
+		$scanned   = 0;
+		$scan_cap  = 50000;
+		$chunk     = 500;
 
-		$out = array();
-		foreach ( (array) $rows as $row ) {
-			$decoded = rawurldecode( (string) $row->post_name );
-			if ( ! $this->transliterator->contains_devanagari( $decoded ) ) {
-				continue;
-			}
-
-			$new_slug = $this->make_slug( $decoded );
-			if ( '' === $new_slug || $new_slug === $decoded ) {
-				continue;
-			}
-
-			$out[] = array(
-				'key'       => 'post:' . absint( $row->ID ),
-				'type'      => 'post',
-				'id'        => absint( $row->ID ),
-				'label'     => get_the_title( $row->ID ),
-				'old_slug'  => $decoded,
-				'new_slug'  => $new_slug,
-				'old_url'   => get_permalink( $row->ID ),
-				'post_type' => sanitize_key( $row->post_type ),
+		while ( count( $out ) < $limit && $scanned < $scan_cap ) {
+			$rows = $wpdb->get_results(
+				$wpdb->prepare(
+					"SELECT ID, post_name, post_type, post_status, post_parent FROM {$wpdb->posts} WHERE ID > %d AND post_name <> '' AND post_type <> 'revision' AND post_status NOT IN ('auto-draft','trash') ORDER BY ID ASC LIMIT %d",
+					$cursor,
+					$chunk
+				)
 			);
 
-			if ( count( $out ) >= $limit ) {
+			if ( empty( $rows ) ) {
 				break;
+			}
+
+			foreach ( $rows as $row ) {
+				$cursor = max( $cursor, absint( $row->ID ) );
+				$scanned++;
+
+				$decoded = rawurldecode( (string) $row->post_name );
+				if ( ! $this->transliterator->contains_devanagari( $decoded ) ) {
+					continue;
+				}
+
+				$new_slug = $this->make_slug( $decoded );
+				if ( '' === $new_slug || $new_slug === $decoded ) {
+					continue;
+				}
+
+				$suggested = wp_unique_post_slug(
+					$new_slug,
+					absint( $row->ID ),
+					(string) $row->post_status,
+					(string) $row->post_type,
+					absint( $row->post_parent )
+				);
+
+				$out[] = array(
+					'key'          => 'post:' . absint( $row->ID ),
+					'type'         => 'post',
+					'id'           => absint( $row->ID ),
+					'label'        => get_the_title( $row->ID ),
+					'old_slug'     => $decoded,
+					'new_slug'     => $suggested,
+					'base_slug'    => $new_slug,
+					'collision'    => $suggested !== $new_slug,
+					'old_url'      => get_permalink( $row->ID ),
+					'post_type'    => sanitize_key( $row->post_type ),
+				);
+
+				if ( count( $out ) >= $limit ) {
+					break 2;
+				}
 			}
 		}
 
 		return $out;
 	}
 
-	/** @return array */
+	/**
+	 * Scan public taxonomy terms by primary-key cursor.
+	 *
+	 * @param int $limit Candidate limit.
+	 * @return array
+	 */
 	private function term_candidates( $limit ) {
 		if ( $limit <= 0 ) {
 			return array();
 		}
 
-		$taxonomies = get_taxonomies( array( 'public' => true ), 'names' );
-		if ( empty( $taxonomies ) ) {
-			return array();
-		}
+		global $wpdb;
+		$out      = array();
+		$cursor   = 0;
+		$scanned  = 0;
+		$scan_cap = 50000;
+		$chunk    = 500;
 
-		$terms = get_terms(
-			array(
-				'taxonomy'   => array_values( $taxonomies ),
-				'hide_empty' => false,
-				'number'     => max( 100, $limit * 10 ),
-				'orderby'    => 'term_id',
-				'order'      => 'ASC',
-			)
-		);
-
-		if ( is_wp_error( $terms ) ) {
-			return array();
-		}
-
-		$out = array();
-		foreach ( $terms as $term ) {
-			$decoded = rawurldecode( (string) $term->slug );
-			if ( ! $this->transliterator->contains_devanagari( $decoded ) ) {
-				continue;
-			}
-
-			$new_slug = $this->make_slug( $decoded );
-			if ( '' === $new_slug || $new_slug === $decoded ) {
-				continue;
-			}
-
-			$old_url = get_term_link( $term );
-			if ( is_wp_error( $old_url ) ) {
-				$old_url = '';
-			}
-
-			$out[] = array(
-				'key'      => 'term:' . absint( $term->term_id ) . ':' . sanitize_key( $term->taxonomy ),
-				'type'     => 'term',
-				'id'       => absint( $term->term_id ),
-				'label'    => $term->name,
-				'old_slug' => $decoded,
-				'new_slug' => $new_slug,
-				'old_url'  => $old_url,
-				'taxonomy' => sanitize_key( $term->taxonomy ),
+		while ( count( $out ) < $limit && $scanned < $scan_cap ) {
+			$rows = $wpdb->get_results(
+				$wpdb->prepare(
+					"SELECT t.term_id, t.name, t.slug, tt.taxonomy FROM {$wpdb->terms} t INNER JOIN {$wpdb->term_taxonomy} tt ON t.term_id = tt.term_id WHERE t.term_id > %d AND t.slug <> '' ORDER BY t.term_id ASC LIMIT %d",
+					$cursor,
+					$chunk
+				)
 			);
 
-			if ( count( $out ) >= $limit ) {
+			if ( empty( $rows ) ) {
 				break;
+			}
+
+			foreach ( $rows as $row ) {
+				$cursor = max( $cursor, absint( $row->term_id ) );
+				$scanned++;
+
+				$taxonomy_object = get_taxonomy( $row->taxonomy );
+				if ( ! $taxonomy_object || empty( $taxonomy_object->public ) ) {
+					continue;
+				}
+
+				$decoded = rawurldecode( (string) $row->slug );
+				if ( ! $this->transliterator->contains_devanagari( $decoded ) ) {
+					continue;
+				}
+
+				$new_slug = $this->make_slug( $decoded );
+				if ( '' === $new_slug || $new_slug === $decoded ) {
+					continue;
+				}
+
+				$term = get_term( absint( $row->term_id ), sanitize_key( $row->taxonomy ) );
+				if ( ! $term || is_wp_error( $term ) ) {
+					continue;
+				}
+
+				$suggested = wp_unique_term_slug( $new_slug, $term );
+				$old_url   = get_term_link( $term );
+				if ( is_wp_error( $old_url ) ) {
+					$old_url = '';
+				}
+
+				$out[] = array(
+					'key'       => 'term:' . absint( $row->term_id ) . ':' . sanitize_key( $row->taxonomy ),
+					'type'      => 'term',
+					'id'        => absint( $row->term_id ),
+					'label'     => (string) $row->name,
+					'old_slug'  => $decoded,
+					'new_slug'  => $suggested,
+					'base_slug' => $new_slug,
+					'collision' => $suggested !== $new_slug,
+					'old_url'   => $old_url,
+					'taxonomy'  => sanitize_key( $row->taxonomy ),
+				);
+
+				if ( count( $out ) >= $limit ) {
+					break 2;
+				}
 			}
 		}
 
@@ -217,6 +270,11 @@ final class Hindi_To_Lat_Migration {
 			return $updated;
 		}
 
+		$updated_post = get_post( $post_id );
+		if ( ! $updated_post || $updated_post->post_name === $post->post_name ) {
+			return false;
+		}
+
 		$new_url = get_permalink( $post_id );
 		$this->redirects->remember( $old_url, $new_url, 'post', $post_id );
 		return true;
@@ -246,7 +304,11 @@ final class Hindi_To_Lat_Migration {
 		}
 
 		$new_term = get_term( $term_id, $taxonomy );
-		$new_url  = $new_term && ! is_wp_error( $new_term ) ? get_term_link( $new_term ) : '';
+		if ( ! $new_term || is_wp_error( $new_term ) || $new_term->slug === $term->slug ) {
+			return false;
+		}
+
+		$new_url = get_term_link( $new_term );
 		if ( ! is_wp_error( $old_url ) && ! is_wp_error( $new_url ) ) {
 			$this->redirects->remember( $old_url, $new_url, 'term', $term_id );
 		}
