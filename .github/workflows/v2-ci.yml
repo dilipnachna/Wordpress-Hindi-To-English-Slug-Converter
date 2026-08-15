@@ -37,3 +37,64 @@ jobs:
 
       - name: Transliteration regression tests
         run: php tests/transliterator-smoke.php
+
+  wordpress-integration:
+    runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: wordpress
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -proot"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup PHP and WP-CLI
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.3"
+          tools: wp-cli
+          coverage: none
+
+      - name: Install latest WordPress
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/htl-wp
+          wp core download --path=/tmp/htl-wp --force
+          wp config create --path=/tmp/htl-wp --dbname=wordpress --dbuser=root --dbpass=root --dbhost=127.0.0.1:3306 --skip-check
+          wp core install --path=/tmp/htl-wp --url=http://example.test --title="Hindi To Lat Test" --admin_user=admin --admin_password=password --admin_email=admin@example.test --skip-email
+          ln -s "$GITHUB_WORKSPACE" /tmp/htl-wp/wp-content/plugins/hindi-to-lat
+          wp core version --path=/tmp/htl-wp
+
+      - name: Prove activation does not rewrite an existing Hindi URL
+        shell: bash
+        run: |
+          set -euo pipefail
+          OLD_ID=$(wp post create --path=/tmp/htl-wp --post_type=post --post_status=publish --post_title='पुरानी खबर' --post_name='पुरानी-खबर' --porcelain)
+          BEFORE=$(wp post get "$OLD_ID" --path=/tmp/htl-wp --field=post_name)
+          wp plugin activate hindi-to-lat --path=/tmp/htl-wp
+          AFTER=$(wp post get "$OLD_ID" --path=/tmp/htl-wp --field=post_name)
+          test "$BEFORE" = "$AFTER"
+          test "$(wp option get hindi_to_lat_db_version --path=/tmp/htl-wp)" = "2.0.0"
+
+      - name: Prove new post and term slugs transliterate
+        shell: bash
+        run: |
+          set -euo pipefail
+          NEW_ID=$(wp post create --path=/tmp/htl-wp --post_type=post --post_status=publish --post_title='हिंदी खबर' --porcelain)
+          NEW_SLUG=$(wp post get "$NEW_ID" --path=/tmp/htl-wp --field=post_name)
+          test "$NEW_SLUG" = "hindi-khabar"
+
+          TERM_ID=$(wp term create category 'राजस्थान समाचार' --path=/tmp/htl-wp --porcelain)
+          TERM_SLUG=$(wp term get category "$TERM_ID" --path=/tmp/htl-wp --field=slug)
+          test "$TERM_SLUG" = "rajasthan-samachar"
