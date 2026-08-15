@@ -65,7 +65,7 @@ jobs:
           tools: wp-cli
           coverage: none
 
-      - name: Install latest WordPress
+      - name: Install latest WordPress with pretty permalinks
         shell: bash
         run: |
           set -euo pipefail
@@ -73,6 +73,7 @@ jobs:
           wp core download --path=/tmp/htl-wp --force
           wp config create --path=/tmp/htl-wp --dbname=wordpress --dbuser=root --dbpass=root --dbhost=127.0.0.1:3306 --skip-check
           wp core install --path=/tmp/htl-wp --url=http://example.test --title="Hindi To Lat Test" --admin_user=admin --admin_password=password --admin_email=admin@example.test --skip-email
+          wp rewrite structure '/%postname%/' --path=/tmp/htl-wp
           ln -s "$GITHUB_WORKSPACE" /tmp/htl-wp/wp-content/plugins/hindi-to-lat
           wp core version --path=/tmp/htl-wp
 
@@ -102,8 +103,10 @@ jobs:
           set -euo pipefail
           OLD_ID=$(cat /tmp/htl-old-id)
           MIGRATED_SLUG=$(wp post get "$OLD_ID" --path=/tmp/htl-wp --field=post_name)
+          echo "Migrated slug: $MIGRATED_SLUG"
           test "$MIGRATED_SLUG" = "purani-khabar"
           REDIRECT_COUNT=$(wp eval --path=/tmp/htl-wp 'global $wpdb; echo (int)$wpdb->get_var("SELECT COUNT(*) FROM {$wpdb->prefix}hindi_to_lat_redirects");')
+          echo "Redirect rows: $REDIRECT_COUNT"
           test "$REDIRECT_COUNT" -ge 1
 
       - name: Prove new post and term slugs transliterate
@@ -112,8 +115,10 @@ jobs:
           set -euo pipefail
           NEW_ID=$(wp post create --path=/tmp/htl-wp --post_type=post --post_status=publish --post_title='हिंदी खबर' --porcelain)
           NEW_SLUG=$(wp post get "$NEW_ID" --path=/tmp/htl-wp --field=post_name)
+          echo "New post slug: $NEW_SLUG"
           test "$NEW_SLUG" = "hindi-khabar"
 
           TERM_ID=$(wp term create category 'राजस्थान समाचार' --path=/tmp/htl-wp --porcelain)
           TERM_SLUG=$(wp term get category "$TERM_ID" --path=/tmp/htl-wp --field=slug)
+          echo "New term slug: $TERM_SLUG"
           test "$TERM_SLUG" = "rajasthan-samachar"
