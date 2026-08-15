@@ -164,7 +164,7 @@ final class Hindi_To_Lat_Admin {
 			<?php endif; ?>
 
 			<?php if ( empty( $candidates ) ) : ?>
-				<p><?php esc_html_e( 'No legacy Devanagari slugs were found in the current preview window.', 'hindi-to-lat' ); ?></p>
+				<p><?php esc_html_e( 'No legacy Devanagari slugs were found in the current scan.', 'hindi-to-lat' ); ?></p>
 				<?php return; ?>
 			<?php endif; ?>
 
@@ -182,9 +182,18 @@ final class Hindi_To_Lat_Admin {
 					<?php foreach ( $candidates as $candidate ) : ?>
 						<tr>
 							<th class="check-column"><input type="checkbox" name="candidate[]" value="<?php echo esc_attr( $candidate['key'] ); ?>" /></th>
-							<td><strong><?php echo esc_html( $candidate['label'] ? $candidate['label'] : $candidate['key'] ); ?></strong><br /><code><?php echo esc_html( $candidate['key'] ); ?></code></td>
+							<td>
+								<strong><?php echo esc_html( $candidate['label'] ? $candidate['label'] : $candidate['key'] ); ?></strong><br />
+								<code><?php echo esc_html( $candidate['key'] ); ?></code>
+								<?php if ( ! empty( $candidate['old_url'] ) ) : ?><br /><small><?php echo esc_html( $candidate['old_url'] ); ?></small><?php endif; ?>
+							</td>
 							<td><code><?php echo esc_html( $candidate['old_slug'] ); ?></code></td>
-							<td><code><?php echo esc_html( $candidate['new_slug'] ); ?></code></td>
+							<td>
+								<code><?php echo esc_html( $candidate['new_slug'] ); ?></code>
+								<?php if ( ! empty( $candidate['collision'] ) ) : ?>
+									<br /><span class="description" style="color:#b32d2e"><?php esc_html_e( 'Collision detected: WordPress will use a unique suffixed slug.', 'hindi-to-lat' ); ?></span>
+								<?php endif; ?>
+							</td>
 						</tr>
 					<?php endforeach; ?>
 					</tbody>
@@ -211,8 +220,8 @@ final class Hindi_To_Lat_Admin {
 		}
 
 		check_admin_referer( 'hindi_to_lat_migrate_batch' );
-		$keys   = isset( $_POST['candidate'] ) ? (array) wp_unslash( $_POST['candidate'] ) : array();
-		$result = $this->migration->convert( $keys );
+		$keys    = isset( $_POST['candidate'] ) ? (array) wp_unslash( $_POST['candidate'] ) : array();
+		$result  = $this->migration->convert( $keys );
 		$message = sprintf(
 			/* translators: 1: converted count, 2: skipped count, 3: error count */
 			__( 'Converted: %1$d; skipped: %2$d; errors: %3$d.', 'hindi-to-lat' ),
@@ -224,7 +233,7 @@ final class Hindi_To_Lat_Admin {
 		wp_safe_redirect(
 			add_query_arg(
 				'htl_result',
-				rawurlencode( $message ),
+				$message,
 				admin_url( 'tools.php?page=hindi-to-lat-migration' )
 			)
 		);
